@@ -1,6 +1,6 @@
 services:
   postgres:
-    container_name: pulse_feed_dashboard
+    container_name: postgres_dashboard
     image: postgres:latest
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -22,3 +22,4 @@ networks:
 
 volumes:
   postgres:
+  pgadmin:
