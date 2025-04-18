@@ -8,8 +8,8 @@ const app = fastify({
 });
 
 app.register(prismaPlugin);
-app.register(authRoutes, { prefix: "/" });
-app.register(feedbackRoutes, { prefix: "/" });
+app.register(authRoutes, { prefix: "/api/auth" });
+app.register(feedbackRoutes, { prefix: "/api" });
 
 
 const start = async () => {
