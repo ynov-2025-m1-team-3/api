@@ -16,6 +16,22 @@ services:
     networks:
       - postgres
     restart: unless-stopped
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - postgres
+    networks:
+      - postgres    
 networks:
   postgres:
     driver: bridge
