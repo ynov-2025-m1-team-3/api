@@ -11,7 +11,6 @@ const app = fastify({
 app.register(prismaPlugin);
 app.register(authRoutes, { prefix: "/api/auth" });
 app.register(feedbackRoutes, { prefix: "/api" });
-app.register(authRoutes, { prefix: "/api" });
 app.register(userRoutes, { prefix: "/api" });
 
 
