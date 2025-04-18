@@ -1,5 +1,4 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import userInterface from "../interface/userInterface";
 import { PrismaClient } from "@prisma/client";
 
 
