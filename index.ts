@@ -7,10 +7,6 @@ const app = fastify({
   logger: true,
 });
 
-app.get("/", async (request, reply) => {
-  return { message: "Hello, Fastify!" };
-});
-
 app.register(prismaPlugin);
 app.register(authRoutes, { prefix: "/" });
 app.register(feedbackRoutes, { prefix: "/" });

@@ -11,7 +11,7 @@ export async function getAllChannels(
 ) {
   try {
     const channels = await prisma.channel.findMany({
-      orderBy: { name: 'asc' }
+      orderBy: { name: "asc" }
     });
     
     return reply.status(200).send({ channels });
@@ -76,7 +76,7 @@ export async function getChannelById(
   }
 }
 
-// Récupérer un channel par son nom ou le créer s'il n'existe pas
+// Récupérer un channel par son nom ou le créer s"il n"existe pas
 export async function getOrCreateChannelByName(name: string) {
   let channel = await prisma.channel.findFirst({
     where: { name }

@@ -7,7 +7,7 @@ export async function addFeedback(
   reply: FastifyReply
 ) {
   try {
-    let feedbackItems = Array.isArray(request.body) ? request.body : [request.body];
+    const feedbackItems = Array.isArray(request.body) ? request.body : [request.body];
     
     if (feedbackItems.length === 0) {
       return reply.status(400).send({ 
@@ -60,7 +60,7 @@ export async function findAllFeedbacks(
 ) {
   try {
     const feedbacks = await request.server.prisma.feedback.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" }
     });
 
     const formattedFeedbacks = await Promise.all(
@@ -72,7 +72,7 @@ export async function findAllFeedbacks(
         return {
           id: feedback.id,
           date: feedback.createdAt.toISOString(),
-          channel: channel?.name || 'unknown',
+          channel: channel?.name || "unknown",
           text: feedback.text
         };
       })
@@ -100,10 +100,10 @@ export async function findByText(
       where: {
         text: {
           contains: text,
-          mode: 'insensitive' 
+          mode: "insensitive" 
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" }
     });
     
     const formattedFeedbacks = await Promise.all(
@@ -115,7 +115,7 @@ export async function findByText(
         return {
           id: feedback.id,
           date: feedback.createdAt.toISOString(),
-          channel: channel?.name || 'unknown',
+          channel: channel?.name || "unknown",
           text: feedback.text
         };
       })
@@ -149,7 +149,7 @@ export async function findByChannel(
     
     const feedbacks = await request.server.prisma.feedback.findMany({
       where: { channelId: channel.id },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" }
     });
     
     const formattedFeedbacks = feedbacks.map((feedback) => ({
