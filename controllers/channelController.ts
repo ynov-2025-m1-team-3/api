@@ -4,7 +4,6 @@ import type { ChannelInterface } from "../interface/channelInterface";
 
 const prisma = new PrismaClient();
 
-// Récupérer tous les channels
 export async function getAllChannels(
   request: FastifyRequest,
   reply: FastifyReply
@@ -21,7 +20,6 @@ export async function getAllChannels(
   }
 }
 
-// Créer un nouveau channel
 export async function createChannel(
   request: FastifyRequest<{ Body: ChannelInterface }>,
   reply: FastifyReply
@@ -33,7 +31,7 @@ export async function createChannel(
       return reply.status(400).send({ message: "Le nom du canal est requis" });
     }
     
-    // Vérifier si le channel existe déjà
+  
     const existingChannel = await prisma.channel.findFirst({
       where: { name }
     });
@@ -53,7 +51,6 @@ export async function createChannel(
   }
 }
 
-// Récupérer un channel par son ID
 export async function getChannelById(
   request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply
@@ -76,7 +73,6 @@ export async function getChannelById(
   }
 }
 
-// Récupérer un channel par son nom ou le créer s"il n"existe pas
 export async function getOrCreateChannelByName(name: string) {
   let channel = await prisma.channel.findFirst({
     where: { name }
