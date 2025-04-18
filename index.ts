@@ -1,6 +1,7 @@
 import fastify from "fastify";
 import prismaPlugin from "./plugins/prisma";
 import authRoutes from "./routes/authRoutes";
+import userRoutes from "./routes/userRoutes";
 
 const app = fastify({
   logger: true,
@@ -12,6 +13,7 @@ app.get("/", async (request, reply) => {
 
 app.register(prismaPlugin);
 app.register(authRoutes, { prefix: "/" });
+app.register(userRoutes, { prefix: "/" });
 
 
 const start = async () => {
