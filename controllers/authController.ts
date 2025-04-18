@@ -1,7 +1,7 @@
 import type { LoginInterface } from "../interface/loginInterface";
 import type { RegisterInterface } from "../interface/registerInterface";
 import jwt from "jsonwebtoken";
-import bcrypt from 'bcryptjs';
+import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
