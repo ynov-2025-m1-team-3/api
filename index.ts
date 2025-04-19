@@ -1,17 +1,17 @@
 import fastify from "fastify";
 import prismaPlugin from "./plugins/prisma";
 import authRoutes from "./routes/authRoutes";
+import feedbackRoutes from "./routes/feedbackRoutes";
+import userRoutes from "./routes/userRoutes";
 
 const app = fastify({
   logger: true,
 });
 
-app.get("/", async (request, reply) => {
-  return { message: "Hello, Fastify!" };
-});
-
-app.register(prismaPlugin);
-app.register(authRoutes, { prefix: "/" });
+await app.register(prismaPlugin);
+app.register(authRoutes, { prefix: "/api/auth" });
+app.register(feedbackRoutes, { prefix: "/api" });
+app.register(userRoutes, { prefix: "/api" });
 
 
 const start = async () => {

@@ -16,7 +16,8 @@ services:
     networks:
       - postgres
     restart: unless-stopped
-  api:
+  app:
+    container_name: api_feedpulse
     build:
       context: .
       dockerfile: Dockerfile
@@ -26,8 +27,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
       - DATABASE_URL=${DATABASE_URL}
+      - NODE_ENV=${NODE_ENV}
     depends_on:
       - postgres
     networks:
