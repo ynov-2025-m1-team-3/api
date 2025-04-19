@@ -8,7 +8,7 @@ const app = fastify({
   logger: true,
 });
 
-app.register(prismaPlugin);
+await app.register(prismaPlugin);
 app.register(authRoutes, { prefix: "/api/auth" });
 app.register(feedbackRoutes, { prefix: "/api" });
 app.register(userRoutes, { prefix: "/api" });
