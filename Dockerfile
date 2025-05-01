@@ -19,7 +19,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
 
 EXPOSE 3000
-
 ENV NODE_ENV=production
+ENV HOST=0.0.0.0
 
 CMD ["bun", "run", "start"]
