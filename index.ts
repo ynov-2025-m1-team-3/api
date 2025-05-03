@@ -17,7 +17,7 @@ app.register(cors, {
 });
 
 app.register(prismaPlugin);
-app.register(authRoutes, { prefix: "/" });
+await app.register(authRoutes, { prefix: "/" });
 
 
 const start = async () => {
