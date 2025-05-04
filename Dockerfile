@@ -1,4 +1,4 @@
-FROM oven/bun:latest AS builder
+FROM --platform=linux/arm64 oven/bun:latest AS builder
 
 RUN mkdir -p /app && \
     adduser --disabled-password --gecos "" appuser && \
@@ -10,6 +10,8 @@ USER appuser
 COPY --chown=appuser:appuser package.json .
 COPY --chown=appuser:appuser prisma ./prisma/
 
+# Copy only package files first to leverage Docker cache
+COPY package.json bun.lockb ./
 RUN bun install --frozen-lockfile
 
 RUN bunx prisma generate

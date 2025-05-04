@@ -3,6 +3,8 @@ import cors from "@fastify/cors";
 import dotenv from "dotenv";
 import prismaPlugin from "./plugins/prisma";
 import authRoutes from "./routes/authRoutes";
+import feedbackRoutes from "./routes/feedbackRoutes";
+import userRoutes from "./routes/userRoutes";
 
 dotenv.config();
 
