@@ -21,6 +21,7 @@ model User {
   password  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  feedbacks Feedback[]
 }
 
 model Channel {
@@ -31,9 +32,11 @@ model Channel {
 }
 
 model Feedback{ 
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
+  Uploader   User   @relation(fields: [UserId] , references: [id] ) 
+  UserId     String
   channelId  String
-  text     String
+  text       String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   sentiment Float @default(0)
