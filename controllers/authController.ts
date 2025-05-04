@@ -48,32 +48,56 @@ export async function registerController(
   reply: FastifyReply
 ) {
   try {
-    const {name , email , password } = request.body;
-    console.log(request.body);
-    const userExisting = await prisma.user.findUnique({
-      where: { email },
-    });
+    const { name, email, password } = request.body;
+    console.log("Request body:", request.body);
+    
+    // Vérifier que tous les champs nécessaires sont présents
     if (!name || !email || !password) {
-      return reply.status(400).send({ message: "All fields are required" });
+      return reply.status(400).send({ message: "Tous les champs sont requis" });
     }
+
+    // Vérifier si l'utilisateur existe déjà
+    const userExisting = await prisma.user.findUnique({
+      where: {
+        email: email // Assurez-vous que email est une chaîne non vide
+      }
+    });
+    
     if (userExisting) {
-      return reply.status(400).send({ message: "User already exists" });  
+      return reply.status(400).send({ message: "Cet email est déjà utilisé" });
     }
+    
+    // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Créer l'utilisateur
     const user = await prisma.user.create({
-      data:{
+      data: {
         name,
         email,
         password: hashedPassword,
       }
     });
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, {
-      expiresIn: "1d",
+    
+    // Générer le token JWT
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET || "default_secret_key",
+      { expiresIn: "1d" }
+    );
+    
+    // Renvoyer la réponse
+    return reply.status(201).send({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email
+      },
+      token
     });
-    return reply.status(201).send({ user, token });
   } catch (error) {
-    console.error(error);
-    return reply.status(500).send({ message: "Internal server error" });
+    console.error("Error during registration:", error);
+    return reply.status(500).send({ message: "Erreur interne du serveur" });
   }
 }
 
