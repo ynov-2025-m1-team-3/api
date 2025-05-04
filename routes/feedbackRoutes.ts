@@ -8,4 +8,6 @@ export default async function feedbackRoutes(fastify: FastifyInstance) {
   fastify.get("/feedback",  FeedbackController.findAllFeedbacks);
   fastify.get("/feedback/search", FeedbackController.findByText);
   fastify.get("/feedback/channel/:channelName",  FeedbackController.findByChannel);
+  fastify.delete("/feedback/:id", FeedbackController.deleteFeedback);
+  fastify.delete("/feedback", FeedbackController.deleteAllFeedbacks);
 }
