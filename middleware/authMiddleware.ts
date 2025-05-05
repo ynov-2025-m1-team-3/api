@@ -20,12 +20,11 @@ export async function authenticate(
   try {
     const authHeader = request.headers.authorization;
     
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader || authHeader.startsWith("Bearer") === false) {
       return reply.code(401).send({ error: "Authentication required" });
     }
     
     const token = authHeader.split(" ")[1];
-    
     if (!token) {
       return reply.code(401).send({ error: "Authentication required" });
     }
@@ -36,14 +35,13 @@ export async function authenticate(
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as jwt.JwtPayload;
 
-    if (!decoded || typeof decoded !== "object" || !decoded.userId) {
+    if (!decoded || typeof decoded !== "object" || !decoded.id) {
       return reply.code(401).send({ error: "Invalid token payload" });
     }
-    
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: decoded.id },
     });
-    
+
     if (!user) {
       return reply.code(401).send({ error: "Invalid token" });
     }

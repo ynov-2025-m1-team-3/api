@@ -1,7 +1,4 @@
 node_modules
-*.log
-dist
-build
-.dockerignore
-Dockerfile
-docker-compose.yml
+.git
+.env
+dist  # Only if you"re building in the container
