@@ -8,6 +8,8 @@ import userRoutes from "./routes/userRoutes";
 
 dotenv.config();
 
+dotenv.config();
+
 const app = fastify({
   logger: true,
 });
