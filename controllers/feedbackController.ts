@@ -270,4 +270,48 @@ export async function findByChannel(
     console.error(error);
     return reply.status(500).send({ message: "Erreur interne du serveur" });
   }
+ 
+}
+export async function deleteFeedback(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  try {
+    const { id } = request.params;
+
+    const feedback = await request.server.prisma.feedback.findUnique({
+      where: { id }
+    });
+
+    if (!feedback) {
+      return reply.status(404).send({ message: "Feedback non trouvé" });
+    }
+
+    await request.server.prisma.feedback.delete({
+      where: { id }
+    });
+
+    return reply.status(200).send({ message: "Feedback supprimé avec succès" });
+  } catch (error) {
+    console.error(error);
+    return reply.status(500).send({ message: "Erreur interne du serveur" });
+  }
+}
+
+export async function deleteAllFeedbacks(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  try {
+    const count = await request.server.prisma.feedback.count();
+    
+    await request.server.prisma.feedback.deleteMany({});
+
+    return reply.status(200).send({ 
+      message: `${count} feedbacks supprimés avec succès` 
+    });
+  } catch (error) {
+    console.error(error);
+    return reply.status(500).send({ message: "Erreur interne du serveur" });
+  }
 }
