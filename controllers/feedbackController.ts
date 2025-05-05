@@ -1,6 +1,5 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import * as ChannelController from "./channelController";
-import type { Feedback } from "../interface/feedbackInterface";
 import natural from "natural";
 
 // Initialiser les outils d'analyse de texte
@@ -43,7 +42,7 @@ function analyzeTextSentiment(text) {
   }
   
   // Score de base avec l'analyseur de Natural
-  let baseScore = analyzer.getSentiment(tokens);
+  const baseScore = analyzer.getSentiment(tokens);
   
   // Analyse lexicale personnalisée
   let customScore = 0;
