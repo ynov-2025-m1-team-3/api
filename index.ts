@@ -13,7 +13,7 @@ const app = fastify({
 });
 
 app.register(cors, {
-  origin: process.env.FRONTEND_URL,
+  origin: process.env.CORS_ORIGIN,
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
 });
