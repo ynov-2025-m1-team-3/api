@@ -1,6 +1,5 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import * as ChannelController from "./channelController";
-import type { Feedback } from "../interface/feedbackInterface";
 
 export async function addFeedback(
   request: FastifyRequest,
