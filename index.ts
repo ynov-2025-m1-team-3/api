@@ -1,22 +1,34 @@
 import fastify from "fastify";
+import cors from "@fastify/cors";
+import dotenv from "dotenv";
 import prismaPlugin from "./plugins/prisma";
 import authRoutes from "./routes/authRoutes";
 import feedbackRoutes from "./routes/feedbackRoutes";
 import userRoutes from "./routes/userRoutes";
 
+dotenv.config();
+
+dotenv.config();
+
 const app = fastify({
   logger: true,
 });
 
-await app.register(prismaPlugin);
-app.register(authRoutes, { prefix: "/api/auth" });
-app.register(feedbackRoutes, { prefix: "/api" });
-app.register(userRoutes, { prefix: "/api" });
+app.register(cors, {
+  origin: process.env.CORS_ORIGIN,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"],
+});
+
+app.register(prismaPlugin);
+await app.register(authRoutes, { prefix: "/api/auth" });
+await app.register(feedbackRoutes, { prefix: "/api" });
+await app.register(userRoutes, { prefix: "/api" });
 
 
 const start = async () => {
   try {
-    await app.listen({ port: 3000, host: "0.0.0.0" });
+    await app.listen({ port: 3000, host: process.env.HOST || "0.0.0.0" });
     console.log("Server is running on port 3000");
   } catch (err) {
     app.log.error(err);

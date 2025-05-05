@@ -7,6 +7,14 @@ export async function addFeedback(
   reply: FastifyReply
 ) {
   try {
+    // Récupérer l'ID de l'utilisateur à partir du middleware d'authentification
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({ 
+        message: "Authentification requise pour ajouter un feedback"
+      });
+    }
+
     const feedbackItems = Array.isArray(request.body) ? request.body : [request.body];
     
     if (feedbackItems.length === 0) {
@@ -31,7 +39,8 @@ export async function addFeedback(
       const feedback = await request.server.prisma.feedback.create({
         data: {
           channelId: channelRecord.id,
-          text
+          text,
+          UserId: userId  // Utiliser l'ID utilisateur du token JWT
         }
       });
 
@@ -39,7 +48,8 @@ export async function addFeedback(
         id: feedback.id,
         date: feedback.createdAt.toISOString(),
         channel: channelRecord.name,
-        text: feedback.text
+        text: feedback.text,
+        userId: userId
       });
     }
 
@@ -60,7 +70,8 @@ export async function findAllFeedbacks(
 ) {
   try {
     const feedbacks = await request.server.prisma.feedback.findMany({
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      include: { Uploader: { select: { id: true, name: true } } }
     });
 
     const formattedFeedbacks = await Promise.all(
@@ -73,7 +84,9 @@ export async function findAllFeedbacks(
           id: feedback.id,
           date: feedback.createdAt.toISOString(),
           channel: channel?.name || "unknown",
-          text: feedback.text
+          text: feedback.text,
+          user: feedback.Uploader?.name || "Anonyme", 
+          userId: feedback.UserId 
         };
       })
     );
