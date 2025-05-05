@@ -49,14 +49,13 @@ export async function registerController(
 ) {
   try {
     const { name, email, password } = request.body;
-    console.log("Request body:", request.body);
     
     // Vérifier que tous les champs nécessaires sont présents
     if (!name || !email || !password) {
       return reply.status(400).send({ message: "Tous les champs sont requis" });
     }
 
-    // Vérifier si l'utilisateur existe déjà
+    // Vérifier si l"utilisateur existe déjà
     const userExisting = await prisma.user.findUnique({
       where: {
         email: email // Assurez-vous que email est une chaîne non vide
@@ -70,7 +69,7 @@ export async function registerController(
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Créer l'utilisateur
+    // Créer l"utilisateur
     const user = await prisma.user.create({
       data: {
         name,
