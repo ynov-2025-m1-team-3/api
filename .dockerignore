@@ -1,0 +1,4 @@
+node_modules
+.git
+.env
+dist  # Only if you"re building in the container
