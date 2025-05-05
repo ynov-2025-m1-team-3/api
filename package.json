@@ -29,6 +29,7 @@
     "fastify": "^5.3.0",
     "fastify-plugin": "^5.0.1",
     "jsonwebtoken": "^9.0.2",
+    "natural": "^8.0.1",
     "prettier": "^3.5.3",
     "prisma": "6.7.0"
   }
