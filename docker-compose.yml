@@ -24,7 +24,9 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      DATABASE_URL: "${DATABASE_URL}"
+      CORS_ORIGIN: "${CORS_ORIGIN}"
+      JWT_SECRET: "${JWT_SECRET}"
       PRISMA_SCHEMA_PATH: "./prisma/schema.prisma" 
     build:
       context: .
