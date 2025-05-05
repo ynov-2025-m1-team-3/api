@@ -20,8 +20,6 @@ export async function authenticate(
   try {
     const authHeader = request.headers.authorization;
     
-    console.log("check authHeader", authHeader.startsWith("Bearer"));
-
     if (!authHeader || authHeader.startsWith("Bearer") === false) {
       return reply.code(401).send({ error: "Authentication required" });
     }
@@ -43,7 +41,6 @@ export async function authenticate(
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
     });
-    console.log("user : " , user);
 
     if (!user) {
       return reply.code(401).send({ error: "Invalid token" });

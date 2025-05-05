@@ -7,10 +7,8 @@ export async function addFeedback(
   reply: FastifyReply
 ) {
   try {
-    console.log("caca");
     // Récupérer l'ID de l'utilisateur à partir du middleware d'authentification
     const userId = request.user?.userId;
-    console.log(request);
     if (!userId) {
       return reply.status(401).send({ 
         message: "Authentification requise pour ajouter un feedback"

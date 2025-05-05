@@ -49,7 +49,6 @@ export async function registerController(
 ) {
   try {
     const { name, email, password } = request.body;
-    console.log("Request body:", request.body);
     
     // Vérifier que tous les champs nécessaires sont présents
     if (!name || !email || !password) {
