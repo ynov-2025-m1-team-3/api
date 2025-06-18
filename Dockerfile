@@ -32,4 +32,9 @@ COPY --from=builder --chown=appuser:appuser /app .
 
 EXPOSE 3000
 ENV NODE_ENV=production
+
+# Sentry environment variables
+ENV SENTRY_DSN=""
+ENV SENTRY_ENVIRONMENT="production"
+
 CMD ["bun", "run", "start"]

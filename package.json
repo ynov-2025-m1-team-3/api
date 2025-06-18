@@ -4,13 +4,14 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "bun build index.ts --outdir=dist --target bun --format esm --sourcemap",
+    "build": "bun install && bunx prisma generate && bun build index.ts --outdir=dist --target bun --format esm --sourcemap ",
     "dev": "bun --watch index.ts",
     "typecheck": "bun run --type-check",
     "start": "PRISMA_LOG_QUERIES=true DATABASE_DEBUG=true bun run dist/index.js",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
-    "postinstall": "bunx prisma generate"
+    "postinstall": "bunx prisma generate",
+    "test:perf": "k6 run metrics.test.js"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -23,14 +24,18 @@
   "dependencies": {
     "@fastify/cors": "^11.0.1",
     "@prisma/client": "6.7.0",
+    "@sentry/bun": "^8.0.0",
+   "@sentry/tracing": "^7.119.2",
     "bcryptjs": "^3.0.2",
     "dotenv": "^16.5.0",
     "eslint": "^9.24.0",
     "fastify": "^5.3.0",
     "fastify-plugin": "^5.0.1",
+    "ioredis": "^5.6.1",
     "jsonwebtoken": "^9.0.2",
     "natural": "^8.0.1",
     "prettier": "^3.5.3",
-    "prisma": "6.7.0"
+    "prisma": "6.7.0",
+    "redis": "^5.0.1"
   }
 }
