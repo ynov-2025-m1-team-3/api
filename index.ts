@@ -8,25 +8,33 @@ import feedbackRoutes from "./routes/feedbackRoutes";
 import userRoutes from "./routes/userRoutes";
 import metricsRoutes from "./routes/redisRoutes";
 
-// Import conditionnel de Sentry pour éviter les conflits sur Render
+dotenv.config();
+
+// Sentry désactivé complètement en production pour éviter les conflits shimmer
 let Sentry: any = null;
 let SentryLogger: any = null;
 
-try {
-  // Sentry activé seulement en développement ou si explicitement activé
-  if (process.env.NODE_ENV !== "production" || process.env.ENABLE_SENTRY === "true") {
+console.log("📊 Environment check:", {
+  NODE_ENV: process.env.NODE_ENV,
+  ENABLE_SENTRY: process.env.ENABLE_SENTRY
+});
+
+// Seulement charger Sentry si nous ne sommes PAS en production
+if (process.env.NODE_ENV !== "production") {
+  try {
+    console.log("🔄 Loading Sentry for development...");
+    // Import synchrone seulement en développement
     require("./instrument");
     Sentry = require("@sentry/bun");
-    SentryLogger = require("./lib/sentryLogger").SentryLogger;
+    const sentryLoggerModule = require("./lib/sentryLogger");
+    SentryLogger = sentryLoggerModule.SentryLogger;
     console.log("✅ Sentry loaded successfully");
-  } else {
-    console.log("⚠️ Sentry disabled in production to avoid shimmer conflicts");
+  } catch (error) {
+    console.warn("⚠️ Sentry loading failed, continuing without it:", (error as Error).message);
   }
-} catch (error) {
-  console.warn("⚠️ Sentry initialization failed, continuing without it:", (error as Error).message);
+} else {
+  console.log("🚫 Sentry completely disabled in production to avoid shimmer conflicts with Bun");
 }
-
-dotenv.config();
 
 const app = fastify({
   logger: true,

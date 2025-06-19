@@ -1,40 +1,47 @@
-import * as Sentry from "@sentry/bun";
+// Instrument.js - Conditionnellement charger Sentry
+console.log("📊 Instrument.js - Environment check:", {
+  NODE_ENV: process.env.NODE_ENV,
+  SENTRY_DSN: process.env.SENTRY_DSN ? 'SET' : 'NOT_SET',
+  ENABLE_SENTRY: process.env.ENABLE_SENTRY,
+  isBun: typeof Bun !== "undefined"
+});
 
-// Vérifier si nous sommes dans un environnement compatible avec Sentry
-const isProductionBun = process.env.NODE_ENV === "production" && typeof Bun !== "undefined";
-const shouldDisableSentry = isProductionBun || !process.env.SENTRY_DSN;
+// Complètement éviter d'importer Sentry en production
+const isProduction = process.env.NODE_ENV === "production";
+const sentryExplicitlyEnabled = process.env.ENABLE_SENTRY === "true";
+const hasSentryDsn = !!process.env.SENTRY_DSN;
 
-if (!shouldDisableSentry) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV || "development",
+if (!isProduction || (sentryExplicitlyEnabled && hasSentryDsn)) {
+  try {
+    console.log("🔄 Loading Sentry...");
+    const Sentry = await import("@sentry/bun");
     
-    // Performance Monitoring
-    tracesSampleRate: 0.1, // Réduit en production
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV || "development",
+      tracesSampleRate: 0.1,
+      integrations: [
+        Sentry.consoleIntegration(),
+      ],
+      beforeSend(event, hint) {
+        if (event.request) {
+          event.tags = {
+            ...event.tags,
+            api_endpoint: event.request.url,
+            method: event.request.method,
+          };
+        }
+        return event;
+      },
+    });
     
-    // Intégrations minimales pour éviter les conflits shimmer
-    integrations: [
-      Sentry.consoleIntegration(),
-    ],
-    
-    // Enhanced error context
-    beforeSend(event, hint) {
-      // Ajouter des informations contextuelles
-      if (event.request) {
-        event.tags = {
-          ...event.tags,
-          api_endpoint: event.request.url,
-          method: event.request.method,
-        };
-      }
-      
-      return event;
-    },
-  });
-  
-  console.log("✅ Sentry initialized successfully");
+    console.log("✅ Sentry initialized successfully");
+    export default Sentry;
+  } catch (error) {
+    console.warn("⚠️ Sentry initialization failed:", error.message);
+    export default null;
+  }
 } else {
-  console.log("⚠️ Sentry disabled for production Bun environment");
+  console.log("⚠️ Sentry completely disabled in production environment");
+  export default null;
 }
-
-export default Sentry;
