@@ -1,157 +1,30 @@
-name: Performance Tests with k6
+name: k6 Performance Tests
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   k6-tests:
     runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_DB: testdb
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpass
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-      
-      redis:
-        image: redis:alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-
     steps:
-    - uses: actions/checkout@v4
-    
-    # Setup Bun (votre projet utilise Bun, pas Node.js)
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v1
-      with:
-        bun-version: latest
-    
-    # API Setup
-    - name: Install API dependencies
-      run: |
-        cd api
-        bun install
-    
-    - name: Generate Prisma client
-      run: |
-        cd api
-        bunx prisma generate
-      env:
-        DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
-    
-    - name: Run database migrations
-      run: |
-        cd api
-        bunx prisma migrate deploy
-      env:
-        DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
-    
-    - name: Seed database
-      run: |
-        cd api
-        bunx prisma db seed
-      env:
-        DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
-    
-    - name: Build API
-      run: |
-        cd api
-        bun run build
-      env:
-        NODE_ENV: production
-    
-    - name: Start API server
-      run: |
-        cd api
-        bun run start &
-        sleep 10
-        echo "API started"
-      env:
-        NODE_ENV: test
-        DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
-        REDIS_URL: redis://localhost:6379
-        JWT_SECRET: test-jwt-secret-key-for-ci
-        PORT: 3000
-    
-    # Frontend Setup
-    - name: Install Frontend dependencies
-      run: |
-        cd front
-        npm ci
-    
-    - name: Build Frontend
-      run: |
-        cd front
-        npm run build
-      env:
-        VITE_API_BASE_URL: http://localhost:3000
-    
-    - name: Start Frontend server
-      run: |
-        cd front
-        npm run preview &
-        sleep 5
-        echo "Frontend started"
-      env:
-        VITE_API_BASE_URL: http://localhost:3000
-    
-    # Wait for services
-    - name: Wait for API health
-      run: |
-        timeout 60 bash -c 'while ! curl -f http://localhost:3000/api/health; do sleep 2; done'
-        echo "✅ API is ready"
-    
-    - name: Wait for Frontend
-      run: |
-        timeout 60 bash -c 'while ! curl -f http://localhost:4173; do sleep 2; done'
-        echo "✅ Frontend is ready"
-    
-    # Install k6
-    - name: Install k6
-      run: |
-        sudo gpg -k
-        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver keyserver.ubuntu.com --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-        sudo apt-get update
-        sudo apt-get install k6
-    
-    # Run tests
-    - name: Run API k6 tests
-      run: |
-        cd api
-        k6 run --duration 2m --vus 5 test/metrics.test.js
-      continue-on-error: true
-    
-    - name: Run Frontend k6 tests
-      run: |
-        cd front
-        k6 run --duration 2m --vus 3 test/frontend-performance.test.js
-      continue-on-error: true
-    
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: k6-results
-        path: |
-          api/k6-results/
-          front/k6-results/
-        retention-days: 7
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - name: Setup K6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run Performance Tests
+        uses: grafana/run-k6-action@v1
+        with:
+          path: test/metrics.test.js
