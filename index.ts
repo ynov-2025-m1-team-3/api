@@ -1,4 +1,3 @@
-import "./instrument"; // Import Sentry en premier (sans instrumentation HTTP automatique)
 import fastify from "fastify";
 import cors from "@fastify/cors";
 import dotenv from "dotenv";
@@ -8,8 +7,24 @@ import authRoutes from "./routes/authRoutes";
 import feedbackRoutes from "./routes/feedbackRoutes";
 import userRoutes from "./routes/userRoutes";
 import metricsRoutes from "./routes/redisRoutes";
-import * as Sentry from "@sentry/bun";
-import { SentryLogger } from "./lib/sentryLogger";
+
+// Import conditionnel de Sentry pour éviter les conflits sur Render
+let Sentry: any = null;
+let SentryLogger: any = null;
+
+try {
+  // Sentry activé seulement en développement ou si explicitement activé
+  if (process.env.NODE_ENV !== "production" || process.env.ENABLE_SENTRY === "true") {
+    require("./instrument");
+    Sentry = require("@sentry/bun");
+    SentryLogger = require("./lib/sentryLogger").SentryLogger;
+    console.log("✅ Sentry loaded successfully");
+  } else {
+    console.log("⚠️ Sentry disabled in production to avoid shimmer conflicts");
+  }
+} catch (error) {
+  console.warn("⚠️ Sentry initialization failed, continuing without it:", (error as Error).message);
+}
 
 dotenv.config();
 
@@ -17,47 +32,67 @@ const app = fastify({
   logger: true,
 });
 
-// Middleware Sentry pour Fastify
-app.addHook("onRequest", async (request, reply) => {
-  const span = Sentry.startSpan({
-    op: "http.server",
-    name: `${request.method} ${request.url}`,
-  }, () => {});
-  
-  request.sentryTransaction = span;
-  const scope = Sentry.getCurrentScope();
-  scope.setTag("method", request.method);
-  scope.setTag("url", request.url);
-  scope.setContext("request", {
-    method: request.method,
-    url: request.url,
-    headers: request.headers,
-    query: request.query,
+// Middleware Sentry pour Fastify (seulement si Sentry est disponible)
+if (Sentry) {
+  app.addHook("onRequest", async (request, reply) => {
+    try {
+      const span = Sentry.startSpan({
+        op: "http.server",
+        name: `${request.method} ${request.url}`,
+      }, () => {});
+      
+      request.sentryTransaction = span;
+      const scope = Sentry.getCurrentScope();
+      scope.setTag("method", request.method);
+      scope.setTag("url", request.url);
+      scope.setContext("request", {
+        method: request.method,
+        url: request.url,
+        headers: request.headers,
+        query: request.query,
+      });
+    } catch (error) {
+      // Ignore les erreurs Sentry pour ne pas casser l'app
+      console.warn("Sentry onRequest hook failed:", error);
+    }
   });
-});
 
-app.addHook("onResponse", async (request, reply) => {
-  if (request.sentryTransaction) {
-    request.sentryTransaction.setStatus({ code: reply.statusCode >= 400 ? 2 : 1 });
-    request.sentryTransaction.end();
-  }
-});
+  app.addHook("onResponse", async (request, reply) => {
+    try {
+      if (request.sentryTransaction) {
+        request.sentryTransaction.setStatus({ code: reply.statusCode >= 400 ? 2 : 1 });
+        request.sentryTransaction.end();
+      }
+    } catch (error) {
+      // Ignore les erreurs Sentry pour ne pas casser l'app
+      console.warn("Sentry onResponse hook failed:", error);
+    }
+  });
+}
 
-// Global error handler avec Sentry
+// Global error handler avec Sentry (conditionnel)
 app.setErrorHandler((error, request, reply) => {
-  SentryLogger.logApiError(request.url, error, {
-    method: request.method,
-    body: request.body,
-    query: request.query,
-    headers: request.headers,
-    statusCode: reply.statusCode
-  });
+  // Log avec Sentry si disponible
+  if (SentryLogger) {
+    try {
+      SentryLogger.logApiError(request.url, error, {
+        method: request.method,
+        body: request.body,
+        query: request.query,
+        headers: request.headers,
+        statusCode: reply.statusCode
+      });
+    } catch (sentryError) {
+      console.warn("Sentry logging failed:", sentryError);
+    }
+  }
+    // Log standard
+  console.error(`API Error on ${request.method} ${request.url}:`, error);
   
-  app.log.error(error);
-  
-  reply.status(500).send({ 
-    message: "Erreur interne du serveur",
-    error: process.env.NODE_ENV === "development" ? error.message : undefined
+  // Réponse d'erreur
+  reply.status(500).send({
+    error: "Internal Server Error",
+    message: process.env.NODE_ENV === "development" ? error.message : "Something went wrong"
   });
 });
 
@@ -67,41 +102,55 @@ app.register(cors, {
   methods: ["GET", "POST", "PUT", "DELETE"],
 });
 
-app.register(prismaPlugin);
-app.register(redisPlugin);
-await app.register(authRoutes, { prefix: "/api/auth" });
-await app.register(feedbackRoutes, { prefix: "/api" });
-await app.register(userRoutes, { prefix: "/api" });
-await app.register(metricsRoutes, { prefix: "/api" });
+// Fonction async pour la configuration des routes
+async function setupApp() {
+  await app.register(prismaPlugin);
+  await app.register(redisPlugin);
+  await app.register(authRoutes, { prefix: "/api/auth" });  await app.register(feedbackRoutes, { prefix: "/api" });
+  await app.register(userRoutes, { prefix: "/api" });
+  await app.register(metricsRoutes, { prefix: "/api" });
+  
+  // Démarrer le serveur
+  await app.listen({
+    port: parseInt(process.env.PORT || "3000"),
+    host: "0.0.0.0",
+  });
+  
+  console.log(`🚀 Server listening on port ${process.env.PORT || 3000}`);
+}
 
-
+// Fonction de démarrage
 const start = async () => {
   try {
-    SentryLogger.logInfo("Starting API server", {
-      port: process.env.PORT || 3000,
-      environment: process.env.NODE_ENV || "development"
-    });
+    if (SentryLogger) {
+      SentryLogger.logInfo("Starting API server", {
+        port: process.env.PORT || 3000,
+        environment: process.env.NODE_ENV || "development"
+      });
+    }
     
-    await app.listen({
-      port: parseInt(process.env.PORT || "3000"),
-      host: "0.0.0.0",
-    });
+    await setupApp();
     
-    SentryLogger.logInfo("API server started successfully", {
-      port: process.env.PORT || 3000
-    });
+    if (SentryLogger) {
+      SentryLogger.logInfo("API server started successfully", {
+        port: process.env.PORT || 3000
+      });
+    }
     
   } catch (err) {
-    SentryLogger.logError(err as Error, {
-      context: "server_startup",
-      port: process.env.PORT || 3000
-    });
+    if (SentryLogger) {
+      SentryLogger.logError(err as Error, {
+        context: "server_startup",
+        port: process.env.PORT || 3000
+      });
+    }
     
-    app.log.error(err);
+    console.error("Failed to start server:", err);
     process.exit(1);
   }
 };
 
+// Lancer le serveur
 start();
 
 // Declare module pour TypeScript
