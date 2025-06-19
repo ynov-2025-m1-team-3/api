@@ -22,10 +22,11 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.0.1",
-    "@prisma/client": "6.7.0",
+    "@prisma/client": "^6.10.1",
     "@sentry/bun": "^8.0.0",
-   "@sentry/tracing": "^7.119.2",
+    "@sentry/tracing": "^7.119.2",
     "bcryptjs": "^3.0.2",
     "dotenv": "^16.5.0",
     "eslint": "^9.24.0",
@@ -35,7 +36,7 @@
     "jsonwebtoken": "^9.0.2",
     "natural": "^8.0.1",
     "prettier": "^3.5.3",
-    "prisma": "6.7.0",
+    "prisma": "^6.10.1",
     "redis": "^5.0.1"
   }
 }

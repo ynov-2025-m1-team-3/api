@@ -6,7 +6,7 @@ export default async function feedbackRoutes(fastify: FastifyInstance) {
   
   fastify.post("/feedback", {preHandler: authenticate}, FeedbackController.addFeedback);
   
-  fastify.get("/feedback",  {preHandler: authenticate}, FeedbackController.findAllFeedbacks);
+  fastify.get("/feedback",  {preHandler: authenticate}, FeedbackController.findAllFeedbacksByUserId);
   fastify.get<{
     Querystring: { text: string };
   }>("/feedback/search", { preHandler: authenticate }, FeedbackController.findByText);

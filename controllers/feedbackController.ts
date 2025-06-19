@@ -154,12 +154,19 @@ export async function addFeedback(
   }
 }
 
-export async function findAllFeedbacks(
+export async function findAllFeedbacksByUserId(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
   try {
+    const userId = request.user?.userId;
+    console.log("User ID:", userId);
+    if (!userId) {
+      return reply.status(401).send({ message: "Utilisateur non authentifié" });
+    }
+
     const feedbacks = await request.server.prisma.feedback.findMany({
+      where: { UserId: userId },
       orderBy: { createdAt: "desc" },
       include: { Uploader: { select: { id: true, name: true } } }
     });
