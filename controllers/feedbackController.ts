@@ -254,7 +254,6 @@ export async function findAllFeedbacksByUserId(
 ) {
   try {
     const userId = request.user?.userId;
-    console.log("User ID:", userId);
     if (!userId) {
       return reply.status(401).send({ message: "Utilisateur non authentifié" });
     }
