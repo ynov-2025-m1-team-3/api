@@ -38,57 +38,52 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Check project structure
-      run: |
-        echo "=== Project structure ==="
-        ls -la
-        echo "=== Checking API directory ==="
-        ls -la api/ || echo "API directory not found"
-        echo "=== Checking for bun.lockb ==="
-        find . -name "bun.lockb" -type f
-    
-    # Setup Bun instead of Node.js
+    # Setup Bun (votre projet utilise Bun, pas Node.js)
     - name: Setup Bun
       uses: oven-sh/setup-bun@v1
       with:
         bun-version: latest
     
-    # Install dependencies with Bun
+    # API Setup
     - name: Install API dependencies
       run: |
-        echo "Installing dependencies with Bun..."
+        cd api
         bun install
     
-    # Cache Bun dependencies
-    - name: Cache Bun dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          node_modules
-          ~/.bun/install/cache
-        key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
-        restore-keys: |
-          ${{ runner.os }}-bun-
-    
-    - name: Setup database
+    - name: Generate Prisma client
       run: |
+        cd api
         bunx prisma generate
+      env:
+        DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+    
+    - name: Run database migrations
+      run: |
+        cd api
         bunx prisma migrate deploy
+      env:
+        DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+    
+    - name: Seed database
+      run: |
+        cd api
         bunx prisma db seed
       env:
         DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
     
     - name: Build API
-      run: |        
+      run: |
+        cd api
         bun run build
       env:
         NODE_ENV: production
     
-    - name: Start API server in background
+    - name: Start API server
       run: |
-        nohup bun run start > api.log 2>&1 &
-        echo $! > api.pid
-        echo "API started with PID: $(cat api.pid)"
+        cd api
+        bun run start &
+        sleep 10
+        echo "API started"
       env:
         NODE_ENV: test
         DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
@@ -96,67 +91,40 @@ jobs:
         JWT_SECRET: test-jwt-secret-key-for-ci
         PORT: 3000
     
-    - name: Wait for API to be ready
+    # Frontend Setup
+    - name: Install Frontend dependencies
       run: |
-        echo "Waiting for API to start..."
-        
-        # Fonction pour vérifier l'API
-        check_api() {
-          local attempt=1
-          local max_attempts=60
-          
-          while [ $attempt -le $max_attempts ]; do
-            echo "Attempt $attempt/$max_attempts"
-            
-            # Vérifier si le processus API est toujours en cours d'exécution
-            if [ -f api.pid ]; then
-              local pid=$(cat api.pid)
-              if ! ps -p $pid > /dev/null; then
-                echo "❌ API process has died (PID: $pid)"
-                echo "=== API Logs ==="
-                cat api.log
-                return 1
-              fi
-            fi
-            
-            # Tester la connexion à l'API
-            if curl -f http://localhost:3000/api/health 2>/dev/null; then
-              echo "✅ API is ready!"
-              return 0
-            fi
-            
-            echo "API not ready yet, waiting 2 seconds..."
-            sleep 2
-            attempt=$((attempt + 1))
-          done
-          
-          echo "❌ API failed to start after $max_attempts attempts"
-          echo "=== Final API Logs ==="
-          cat api.log
-          return 1
-        }
-        
-        # Vérifier l'API
-        if ! check_api; then
-          echo "=== Diagnostic Info ==="
-          echo "Process status:"
-          ps aux | grep bun || echo "No bun processes found"
-          
-          echo "Network status:"
-          netstat -tlnp | grep :3000 || echo "Port 3000 not listening"
-          
-          echo "Environment variables:"
-          env | grep -E "(DATABASE_URL|REDIS_URL|NODE_ENV)"
-          
-          echo "=== API directory contents ==="
-          ls -la api/
-          
-          echo "=== Dist directory contents ==="
-          ls -la api/dist/ || echo "No dist directory"
-          
-          exit 1
-        fi
+        cd front
+        npm ci
     
+    - name: Build Frontend
+      run: |
+        cd front
+        npm run build
+      env:
+        VITE_API_BASE_URL: http://localhost:3000
+    
+    - name: Start Frontend server
+      run: |
+        cd front
+        npm run preview &
+        sleep 5
+        echo "Frontend started"
+      env:
+        VITE_API_BASE_URL: http://localhost:3000
+    
+    # Wait for services
+    - name: Wait for API health
+      run: |
+        timeout 60 bash -c 'while ! curl -f http://localhost:3000/api/health; do sleep 2; done'
+        echo "✅ API is ready"
+    
+    - name: Wait for Frontend
+      run: |
+        timeout 60 bash -c 'while ! curl -f http://localhost:4173; do sleep 2; done'
+        echo "✅ Frontend is ready"
+    
+    # Install k6
     - name: Install k6
       run: |
         sudo gpg -k
@@ -165,47 +133,25 @@ jobs:
         sudo apt-get update
         sudo apt-get install k6
     
-    - name: Verify k6 test file exists
+    # Run tests
+    - name: Run API k6 tests
       run: |
-        if [ -f "test/metrics.test.js" ]; then
-          echo "✅ k6 test file found"
-          head -n 10 test/metrics.test.js
-        else
-          echo "❌ k6 test file not found"
-          echo "Available files in test/:"
-          ls -la test/ || echo "test/ directory not found"
-          exit 1
-        fi
-    
-    - name: Run k6 Performance Tests
-      run: |
-        echo "Starting k6 tests..."
-        k6 run --duration 1m --vus 3 test/metrics.test.js
+        cd api
+        k6 run --duration 2m --vus 5 test/metrics.test.js
       continue-on-error: true
     
-    - name: Show API logs
-      if: always()
+    - name: Run Frontend k6 tests
       run: |
-        echo "=== API Logs ==="
-        cat api.log || echo "No API logs found"
+        cd front
+        k6 run --duration 2m --vus 3 test/frontend-performance.test.js
+      continue-on-error: true
     
-    - name: Stop API server
-      if: always()
-      run: |
-        if [ -f api.pid ]; then
-          local pid=$(cat api.pid)
-          echo "Stopping API server (PID: $pid)"
-          kill $pid || echo "API process already stopped"
-          sleep 2
-          kill -9 $pid 2>/dev/null || echo "API process fully stopped"
-        fi
-    
-    - name: Upload k6 results
+    - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: k6-results
         path: |
-          k6-results/
-          api.log
+          api/k6-results/
+          front/k6-results/
         retention-days: 7
