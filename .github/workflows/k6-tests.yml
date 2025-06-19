@@ -1,0 +1,22 @@
+name: k6 Performance Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  k6-tests:
+    runs-on: ubuntu-latest
+    container:
+      image: grafana/k6:latest
+      options: --user root --entrypoint=""
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run k6 Test
+        run: bun run test:perf
