@@ -58,7 +58,7 @@ export async function registerController(
     // Vérifier si l"utilisateur existe déjà
     const userExisting = await prisma.user.findUnique({
       where: {
-        email: email // Assurez-vous que email est une chaîne non vide
+        email: email 
       }
     });
     
@@ -69,7 +69,7 @@ export async function registerController(
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Créer l"utilisateur
+    // Créer l'utilisateur
     const user = await prisma.user.create({
       data: {
         name,
