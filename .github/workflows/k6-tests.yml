@@ -1,4 +1,4 @@
-name: Performance Tests with k6 (Docker)
+name: Performance Tests with k6
 
 on:
   push:
@@ -9,87 +9,206 @@ on:
 jobs:
   k6-tests:
     runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
 
     steps:
     - uses: actions/checkout@v4
     
-    - name: Create docker-compose for CI
+    # Vérifier la structure du projet
+    - name: Check project structure
       run: |
-        cat > docker-compose.ci.yml << 'EOF'
-        version: '3.8'
-        services:
-          db:
-            image: postgres:15
-            environment:
-              POSTGRES_DB: testdb
-              POSTGRES_USER: testuser
-              POSTGRES_PASSWORD: testpass
-            healthcheck:
-              test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
-              interval: 5s
-              timeout: 5s
-              retries: 5
-          
-          redis:
-            image: redis:alpine
-            healthcheck:
-              test: ["CMD", "redis-cli", "ping"]
-              interval: 5s
-              timeout: 5s
-              retries: 5
-          
-          api:
-            build: ./api
-            ports:
-              - "3000:3000"
-            environment:
-              NODE_ENV: test
-              DATABASE_URL: postgresql://testuser:testpass@db:5432/testdb
-              REDIS_URL: redis://redis:6379
-              JWT_SECRET: test-jwt-secret-key-for-ci
-            depends_on:
-              db:
-                condition: service_healthy
-              redis:
-                condition: service_healthy
-            healthcheck:
-              test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-              interval: 10s
-              timeout: 5s
-              retries: 10
-        EOF
+        echo "=== Project structure ==="
+        ls -la
+        echo "=== Checking for package.json files ==="
+        find . -name "package.json" -type f
+        echo "=== Checking for package-lock.json files ==="
+        find . -name "package-lock.json" -type f
     
-    - name: Start services
-      run: |
-        docker-compose -f docker-compose.ci.yml up -d
-        echo "Waiting for services to be healthy..."
-        docker-compose -f docker-compose.ci.yml ps
-        
-        # Wait for API health check
-        timeout 120 bash -c 'until curl -f http://localhost:3000/api/health; do 
-          echo "Waiting for API..."
-          sleep 5
-        done'
-        
-        echo "✅ All services are ready!"
+    # Setup Node.js sans cache au début pour éviter l'erreur
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
     
-    - name: Run k6 tests
+    # Installer les dépendances et créer le cache manuellement
+    - name: Install API dependencies
       run: |
-        # Install k6
-        sudo apt update
-        sudo snap install k6
+        if [ -f "api/package.json" ]; then
+          echo "Found API package.json"
+          cd api
+          npm ci
+        else
+          echo "❌ API package.json not found"
+          exit 1
+        fi
+    
+    # Maintenant setup le cache après que les node_modules existent
+    - name: Cache Node.js modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          api/node_modules
+          ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('api/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+    
+    - name: Setup database
+      run: |
+        cd api
+        npx prisma generate
+        npx prisma migrate deploy
+        npx prisma db seed
+      env:
+        DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+    
+    - name: Install wait-port
+      run: |
+        cd api
+        npm install wait-port
+    
+    - name: Start API server in background
+      run: |
+        cd api
+        nohup npm start > api.log 2>&1 &
+        echo $! > api.pid
+        echo "API started with PID: $(cat api.pid)"
+      env:
+        NODE_ENV: test
+        DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET: test-jwt-secret-key-for-ci
+        PORT: 3000
+    
+    - name: Wait for API to be ready
+      run: |
+        echo "Waiting for API to start..."
         
-        # Run tests
-        k6 run --duration 1m --vus 3 api/test/metrics.test.js
+        # Fonction pour vérifier l'API
+        check_api() {
+          local attempt=1
+          local max_attempts=60
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt/$max_attempts"
+            
+            # Vérifier si le processus API est toujours en cours d'exécution
+            if [ -f api.pid ]; then
+              local pid=$(cat api.pid)
+              if ! ps -p $pid > /dev/null; then
+                echo "❌ API process has died (PID: $pid)"
+                echo "=== API Logs ==="
+                cat api/api.log
+                return 1
+              fi
+            fi
+            
+            # Tester la connexion à l'API
+            if curl -f http://localhost:3000/api/health 2>/dev/null; then
+              echo "✅ API is ready!"
+              return 0
+            fi
+            
+            echo "API not ready yet, waiting 2 seconds..."
+            sleep 2
+            attempt=$((attempt + 1))
+          done
+          
+          echo "❌ API failed to start after $max_attempts attempts"
+          echo "=== Final API Logs ==="
+          cat api/api.log
+          return 1
+        }
+        
+        # Vérifier l'API
+        if ! check_api; then
+          echo "=== Diagnostic Info ==="
+          echo "Process status:"
+          ps aux | grep node || echo "No node processes found"
+          
+          echo "Network status:"
+          netstat -tlnp | grep :3000 || echo "Port 3000 not listening"
+          
+          echo "Environment variables:"
+          env | grep -E "(DATABASE_URL|REDIS_URL|NODE_ENV)"
+          
+          exit 1
+        fi
+    
+    - name: Install k6
+      run: |
+        sudo gpg -k
+        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver keyserver.ubuntu.com --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+    
+    - name: Verify k6 test file exists
+      run: |
+        if [ -f "api/test/metrics.test.js" ]; then
+          echo "✅ k6 test file found"
+          head -n 10 api/test/metrics.test.js
+        else
+          echo "❌ k6 test file not found"
+          echo "Available files in api/test/:"
+          ls -la api/test/ || echo "api/test/ directory not found"
+          exit 1
+        fi
+    
+    - name: Run k6 Performance Tests
+      run: |
+        cd api
+        echo "Starting k6 tests..."
+        k6 run --duration 1m --vus 3 test/metrics.test.js
       continue-on-error: true
     
-    - name: Show logs
+    - name: Show API logs
       if: always()
       run: |
         echo "=== API Logs ==="
-        docker-compose -f docker-compose.ci.yml logs api
+        cat api/api.log || echo "No API logs found"
     
-    - name: Cleanup
+    - name: Stop API server
       if: always()
       run: |
-        docker-compose -f docker-compose.ci.yml down -v
+        if [ -f api.pid ]; then
+          local pid=$(cat api.pid)
+          echo "Stopping API server (PID: $pid)"
+          kill $pid || echo "API process already stopped"
+          sleep 2
+          kill -9 $pid 2>/dev/null || echo "API process fully stopped"
+        fi
+    
+    - name: Upload k6 results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: k6-results
+        path: |
+          api/k6-results/
+          api/api.log
+        retention-days: 7
