@@ -22,7 +22,7 @@ export default async function metricsRoutes(fastify: FastifyInstance) {
       }
       
       // Sauvegarder dans Redis
-      await fastify.redis.hSet(
+      await fastify.redis.hset(
         "k6_performance",
         timestamp,
         JSON.stringify(metrics)
@@ -36,10 +36,9 @@ export default async function metricsRoutes(fastify: FastifyInstance) {
         timestamp
       });
     } catch (error) {
-      fastify.log.error(error);
-      return reply.status(500).send({ 
+      fastify.log.error(error);      return reply.status(500).send({ 
         error: "Erreur lors de l'enregistrement des métriques",
-        details: error.message
+        details: (error as Error).message
       });
     }
   });
@@ -47,12 +46,12 @@ export default async function metricsRoutes(fastify: FastifyInstance) {
   // Route pour récupérer les métriques
   fastify.get("/metrics", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const keys = await fastify.redis.hKeys("k6_performance");
-      const results = {};
+      const keys = await fastify.redis.hkeys("k6_performance");
+      const results: Record<string, any> = {};
       
       for (const key of keys) {
-        const value = await fastify.redis.hGet("k6_performance", key);
-        results[key] = JSON.parse(value);
+        const value = await fastify.redis.hget("k6_performance", key);
+        results[key] = JSON.parse(value as string);
       }
       
       return reply.status(200).send(results);
@@ -60,7 +59,7 @@ export default async function metricsRoutes(fastify: FastifyInstance) {
       fastify.log.error(error);
       return reply.status(500).send({ 
         error: "Erreur lors de la récupération des métriques",
-        details: error.message 
+        details: (error as Error).message 
       });
     }
   });

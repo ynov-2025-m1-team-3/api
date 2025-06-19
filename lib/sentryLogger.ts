@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/bun";
+import * as Sentry from "@sentry/node";
 
 export const SentryLogger = {
   // Log d'erreur avec contexte

@@ -50,6 +50,6 @@ export async function authenticate(
     
     done();
   } catch (error) {
-    return reply.code(401).send({error: error.message});
+    return reply.code(401).send({error: (error as Error).message});
   }
 }
