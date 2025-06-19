@@ -57,7 +57,7 @@ jobs:
     # Installer les dépendances et créer le cache manuellement
     - name: Install API dependencies
       run: |
-        if [ -f "api/package.json" ]; then
+        if [ -f "package.json" ]; then
           echo "Found API package.json"
           cd api
           npm ci
@@ -71,9 +71,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          api/node_modules
+          node_modules
           ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('api/package-lock.json') }}
+        key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-
     
@@ -122,7 +122,7 @@ jobs:
               if ! ps -p $pid > /dev/null; then
                 echo "❌ API process has died (PID: $pid)"
                 echo "=== API Logs ==="
-                cat api/api.log
+                cat api.log
                 return 1
               fi
             fi
@@ -140,7 +140,7 @@ jobs:
           
           echo "❌ API failed to start after $max_attempts attempts"
           echo "=== Final API Logs ==="
-          cat api/api.log
+          cat api.log
           return 1
         }
         
@@ -169,13 +169,13 @@ jobs:
     
     - name: Verify k6 test file exists
       run: |
-        if [ -f "api/test/metrics.test.js" ]; then
+        if [ -f "test/metrics.test.js" ]; then
           echo "✅ k6 test file found"
-          head -n 10 api/test/metrics.test.js
+          head -n 10 test/metrics.test.js
         else
           echo "❌ k6 test file not found"
-          echo "Available files in api/test/:"
-          ls -la api/test/ || echo "api/test/ directory not found"
+          echo "Available files in test/:"
+          ls -la test/ || echo "test/ directory not found"
           exit 1
         fi
     
@@ -190,7 +190,7 @@ jobs:
       if: always()
       run: |
         echo "=== API Logs ==="
-        cat api/api.log || echo "No API logs found"
+        cat api.log || echo "No API logs found"
     
     - name: Stop API server
       if: always()
@@ -209,6 +209,6 @@ jobs:
       with:
         name: k6-results
         path: |
-          api/k6-results/
-          api/api.log
+          k6-results/
+          api.log
         retention-days: 7
