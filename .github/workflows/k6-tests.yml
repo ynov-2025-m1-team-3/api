@@ -27,7 +27,7 @@ jobs:
       - name: Build Project
         run: bun run build
 
-      -name: Run Start
+      - name: Run Start
         run: bun run start
 
       - name: Run Performance Tests
