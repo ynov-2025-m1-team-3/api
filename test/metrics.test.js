@@ -24,7 +24,7 @@ export const options = {
 
 const BASE_URL = "http://localhost:3000";
 const ENDPOINTS = {
-  HEALTH: `${BASE_URL}/api/health`,
+  HEALTH: `${BASE_URL}/api/auth/health`,
   LOGIN: `${BASE_URL}/api/auth/login`,
   REGISTER: `${BASE_URL}/api/auth/register`,
   FEEDBACK: `${BASE_URL}/api/feedback`,

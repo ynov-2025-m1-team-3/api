@@ -74,6 +74,7 @@ await app.register(feedbackRoutes, { prefix: "/api" });
 await app.register(userRoutes, { prefix: "/api" });
 await app.register(metricsRoutes, { prefix: "/api" });
 
+
 const start = async () => {
   try {
     SentryLogger.logInfo("Starting API server", {
