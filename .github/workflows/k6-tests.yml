@@ -59,7 +59,6 @@ jobs:
       run: |
         if [ -f "package.json" ]; then
           echo "Found API package.json"
-          cd api
           npm ci
         else
           echo "❌ API package.json not found"
@@ -79,7 +78,6 @@ jobs:
     
     - name: Setup database
       run: |
-        cd api
         npx prisma generate
         npx prisma migrate deploy
         npx prisma db seed
@@ -88,12 +86,10 @@ jobs:
     
     - name: Install wait-port
       run: |
-        cd api
         npm install wait-port
     
     - name: Start API server in background
       run: |
-        cd api
         nohup npm start > api.log 2>&1 &
         echo $! > api.pid
         echo "API started with PID: $(cat api.pid)"
@@ -180,8 +176,7 @@ jobs:
         fi
     
     - name: Run k6 Performance Tests
-      run: |
-        cd api
+      run: |        
         echo "Starting k6 tests..."
         k6 run --duration 1m --vus 3 test/metrics.test.js
       continue-on-error: true
