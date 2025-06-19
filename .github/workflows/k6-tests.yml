@@ -24,9 +24,7 @@ jobs:
         run: bun install
 
       - name: Install k6
-        uses: grafana/setup-k6@v2
-        with:
-          k6-version: latest
+        uses: grafana/setup-k6@v0.2.0
 
       - name: Run Performance Tests
         run: bun run test:perf
