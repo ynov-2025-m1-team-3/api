@@ -34,9 +34,9 @@ const ENDPOINTS = {
 
 // Données de test
 const TEST_USERS = [
-  { email: "k6test1@example.com", password: "K6TestPassword123!" },
-  { email: "k6test2@example.com", password: "K6TestPassword123!" },
-  { email: "k6test3@example.com", password: "K6TestPassword123!" },
+  {name: "k6test1", email: "k6test1@example.com", password: "K6TestPassword123!" },
+  {name: "k6test2", email: "k6test2@example.com", password: "K6TestPassword123!" },
+  {name: "k6test3", email: "k6test3@example.com", password: "K6TestPassword123!" },
 ];
 
 // Fonction pour créer un utilisateur
