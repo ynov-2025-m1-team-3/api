@@ -2,9 +2,8 @@
   "name": "api",
   "module": "index.ts",
   "type": "module",
-  "private": true,
-  "scripts": {
-    "build": "bun install && bunx prisma generate && bun build index.ts --outdir=dist --target bun --format esm --sourcemap ",
+  "private": true,  "scripts": {
+    "build": "bun install --force && bunx prisma generate && bun build index.ts --outdir=dist --target bun --format esm --sourcemap ",
     "dev": "bun --watch index.ts",
     "typecheck": "bun run --type-check",
     "start": "PRISMA_LOG_QUERIES=true DATABASE_DEBUG=true bun run dist/index.js",
@@ -15,7 +14,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:unit": "jest --testPathPattern=__tests__",
-    "test:perf": "k6 run metrics.test.js"
+    "test:perf": "k6 run test/metrics.test.js",
+    "test:k6:local": "bash scripts/run-k6-tests.sh"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
@@ -31,8 +31,9 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.0.1",
-    "@prisma/client": "6.7.0",
+    "@prisma/client": "^6.10.1",
     "@sentry/bun": "^8.0.0",
     "@sentry/tracing": "^7.119.2",
     "bcryptjs": "^3.0.2",
@@ -45,7 +46,7 @@
     "jsonwebtoken": "^9.0.2",
     "natural": "^8.0.1",
     "prettier": "^3.5.3",
-    "prisma": "6.7.0",
+    "prisma": "^6.10.1",
     "redis": "^5.0.1"
   }
 }

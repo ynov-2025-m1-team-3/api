@@ -8,4 +8,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post("/login", AuthController.loginController);
 
   fastify.get("/me", { preHandler: authenticate }, AuthController.getCurrentUser);
+
+  fastify.get("/health", async (request, reply) => {
+    return reply.status(200).send({ status: "ok" });
+  });
 }

@@ -234,6 +234,47 @@ export async function findAllFeedbacks(
           date: feedback.createdAt.toISOString(),
           channel: channel?.name || "unknown",
           text: feedback.text,
+          user: feedback.Uploader?.name || "Unknown User",
+          userId: feedback.UserId,
+          sentiment: feedback.sentiment,
+        };
+      }),
+    );
+
+    return reply.status(200).send(formattedFeedbacks);
+  } catch (error) {
+    console.error(error);
+    return reply.status(500).send({ message: "Erreur interne du serveur" });
+  }
+}
+
+export async function findAllFeedbacksByUserId(
+  request: FastifyRequest,
+  reply: FastifyReply,
+) {
+  try {
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({ message: "Utilisateur non authentifié" });
+    }
+
+    const feedbacks = await request.server.prisma.feedback.findMany({
+      where: { UserId: userId },
+      orderBy: { createdAt: "desc" },
+      include: { Uploader: { select: { id: true, name: true } } },
+    });
+
+    const formattedFeedbacks = await Promise.all(
+      feedbacks.map(async (feedback) => {
+        const channel = await request.server.prisma.channel.findUnique({
+          where: { id: feedback.channelId },
+        });
+
+        return {
+          id: feedback.id,
+          date: feedback.createdAt.toISOString(),
+          channel: channel?.name || "unknown",
+          text: feedback.text,
           user: feedback.Uploader?.name || "Anonyme",
           userId: feedback.UserId,
           sentiment: feedback.sentiment,
@@ -370,6 +411,25 @@ export async function deleteAllFeedbacks(
     return reply.status(200).send({
       message: `${count} feedbacks supprimés avec succès`,
     });
+  } catch (error) {
+    console.error(error);
+    return reply.status(500).send({ message: "Erreur interne du serveur" });
+  }
+}
+
+export async function deleteFeedbacksByUserId(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  try {
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({ message: "Utilisateur non authentifié" });
+    }
+    await request.server.prisma.feedback.deleteMany({
+      where: { UserId: userId }
+    });
+    return reply.status(200).send({ message: "Tous les feedbacks de l'utilisateur ont été supprimés avec succès" });
   } catch (error) {
     console.error(error);
     return reply.status(500).send({ message: "Erreur interne du serveur" });

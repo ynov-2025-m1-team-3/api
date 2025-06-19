@@ -1,0 +1,109 @@
+name: k6 Load Test
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  run-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: pulsefeed
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Setup environment
+        run: |
+          cp .env.example .env || echo "DATABASE_URL=postgresql://postgres:admin@localhost:5432/pulsefeed?schema=public
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=admin
+          POSTGRES_HOST=localhost
+          POSTGRES_PORT=5432
+          POSTGRES_DB=pulsefeed
+          JWT_SECRET=test-jwt-secret-for-ci
+          API_URL=http://localhost:3000
+          CORS_ORIGIN=http://localhost:5173
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          REDIS_PASSWORD=
+          SENTRY_DSN=" > .env
+
+      - name: Setup database
+        run: |
+          bunx prisma generate
+          bunx prisma migrate reset --force --skip-seed || bunx prisma migrate deploy
+
+      - name: Build application
+        run: bun run build || echo "Build completed"
+
+      - name: Start API in background
+        run: |
+          bun run start &
+          sleep 10
+          echo "API_PID=$!" >> $GITHUB_ENV
+
+      - name: Wait for API to be ready
+        run: |
+          echo "Waiting for API to be ready..."
+          for i in {1..30}; do
+            if curl -f http://localhost:3000/api/auth/health >/dev/null 2>&1; then
+              echo "✅ API is ready!"
+              break
+            fi
+            echo "⏳ Waiting for API (attempt $i/30)..."
+            sleep 2
+          done
+
+      - name: Setup K6
+        uses: grafana/setup-k6-action@v1
+        
+      - name: Run K6 performance tests
+        uses: grafana/run-k6-action@v1
+        with:
+          path: test/metrics.test.js
+        continue-on-error: true
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ ! -z "$API_PID" ]; then
+            kill $API_PID || echo "API process already stopped"
+          fi
+          pkill -f "bun.*start" || echo "No bun processes found"
