@@ -1,6 +1,6 @@
 import Redis from "ioredis";
 import fp from "fastify-plugin";
-import { SentryLogger } from "../lib/sentryLogger";
+import { SentryLogger } from "../lib/sentryLogger.js";
 
 declare module "fastify" {
   interface FastifyInstance {

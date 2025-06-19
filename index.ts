@@ -1,15 +1,15 @@
-import "./instrument"; // Import Sentry en premier
+import "./instrument.js"; // Import Sentry en premier
 import fastify from "fastify";
 import cors from "@fastify/cors";
 import dotenv from "dotenv";
-import prismaPlugin from "./plugins/prisma";
-import redisPlugin from "./plugins/redis";
-import authRoutes from "./routes/authRoutes";
-import feedbackRoutes from "./routes/feedbackRoutes";
-import userRoutes from "./routes/userRoutes";
-import metricsRoutes from "./routes/redisRoutes";
+import prismaPlugin from "./plugins/prisma.js";
+import redisPlugin from "./plugins/redis.js";
+import authRoutes from "./routes/authRoutes.js";
+import feedbackRoutes from "./routes/feedbackRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import metricsRoutes from "./routes/redisRoutes.js";
 import * as Sentry from "@sentry/node";
-import { SentryLogger } from "./lib/sentryLogger";
+import { SentryLogger } from "./lib/sentryLogger.js";
 
 dotenv.config();
 

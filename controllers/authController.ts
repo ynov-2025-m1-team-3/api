@@ -1,5 +1,5 @@
-import type { LoginInterface } from "../interface/loginInterface";
-import type { RegisterInterface } from "../interface/registerInterface";
+import type { LoginInterface } from "../interface/loginInterface.js";
+import type { RegisterInterface } from "../interface/registerInterface.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";

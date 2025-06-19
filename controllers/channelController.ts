@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { PrismaClient } from "@prisma/client";
-import type { ChannelInterface } from "../interface/channelInterface";
+import type { ChannelInterface } from "../interface/channelInterface.js";
 
 const prisma = new PrismaClient();
 

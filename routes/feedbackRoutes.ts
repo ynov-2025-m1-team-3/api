@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { authenticate } from "../middleware/authMiddleware";
-import * as FeedbackController from "../controllers/feedbackController";
+import { authenticate } from "../middleware/authMiddleware.js";
+import * as FeedbackController from "../controllers/feedbackController.js";
 
 export default async function feedbackRoutes(fastify: FastifyInstance) {
   

@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import * as ChannelController from "./channelController";
+import * as ChannelController from "./channelController.js";
 import natural from "natural";
 
 // Initialiser les outils d'analyse de texte
