@@ -9,39 +9,73 @@ const feedbackFetchDuration = new Trend("feedback_fetch_duration");
 
 export const options = {
   stages: [
-    { duration: "30s", target: 20 },   // Montée progressive
-    { duration: "1m", target: 50 },    // Charge normale
-    { duration: "30s", target: 100 },  // Pic de charge
-    { duration: "1m", target: 50 },    // Retour à la normale
-    { duration: "30s", target: 0 },    // Descente
+    { duration: "30s", target: 20 },
+    { duration: "1m", target: 50 },
+    { duration: "30s", target: 100 },
+    { duration: "1m", target: 50 },
+    { duration: "30s", target: 0 },
   ],
   thresholds: {
-    http_req_duration: ["p(95)<500"],        // 95% des requêtes < 500ms
-    http_req_failed: ["rate<0.1"],          // Moins de 10% d'erreurs
-    errors: ["rate<0.1"],                   // Moins de 10% d'erreurs custom
-    auth_duration: ["p(95)<300"],           // Auth < 300ms
-    feedback_fetch_duration: ["p(95)<400"], // Fetch feedbacks < 400ms
+    http_req_duration: ["p(95)<500"],
+    http_req_failed: ["rate<0.1"],
+    errors: ["rate<0.1"],
+    auth_duration: ["p(95)<300"],
+    feedback_fetch_duration: ["p(95)<400"],
   },
 };
 
-// Configuration des endpoints
 const BASE_URL = "http://localhost:3000";
 const ENDPOINTS = {
   LOGIN: `${BASE_URL}/api/auth/login`,
+  REGISTER: `${BASE_URL}/api/auth/register`,
   FEEDBACK: `${BASE_URL}/api/feedback`,
   METRICS: `${BASE_URL}/api/metrics`,
-  REGISTER: `${BASE_URL}/api/auth/register`,
 };
 
 // Données de test
 const TEST_USERS = [
-  { email: "test@test.com", password: "testee" },
-  { email: "test@test2.com", password: "testee" },
+  { email: "k6test1@example.com", password: "K6TestPassword123!" },
+  { email: "k6test2@example.com", password: "K6TestPassword123!" },
+  { email: "k6test3@example.com", password: "K6TestPassword123!" },
 ];
+
+// Fonction pour créer un utilisateur
+function createTestUser(user) {
+  console.log(`Creating test user: ${user.email}`);
+  
+  const response = http.post(
+    ENDPOINTS.REGISTER,
+    JSON.stringify(user),
+    {
+      headers: { "Content-Type": "application/json" },
+      tags: { endpoint: "register" },
+    }
+  );
+  
+  const success = check(response, {
+    "user creation status is 201 or 409": (r) => r.status === 201 || r.status === 409, // 409 = user already exists
+  });
+  
+  if (response.status === 201) {
+    console.log(`✅ User created: ${user.email}`);
+  } else if (response.status === 409) {
+    console.log(`ℹ️ User already exists: ${user.email}`);
+  } else {
+    console.error(`❌ Failed to create user ${user.email}: ${response.status} - ${response.body}`);
+  }
+  
+  return success;
+}
 
 export function getAuthToken() {
   const startTime = Date.now();
   const user = TEST_USERS[Math.floor(Math.random() * TEST_USERS.length)];
+  
+  // Essayer de créer l'utilisateur d'abord (au cas où il n'existerait pas)
+  createTestUser(user);
+  
+  // Attendre un peu pour que la création soit effective
+  sleep(0.5);
   
   const response = http.post(
     ENDPOINTS.LOGIN,
@@ -55,7 +89,11 @@ export function getAuthToken() {
   const duration = Date.now() - startTime;
   authDuration.add(duration);
   
-  console.log(`Login response: ${response.status} (${duration}ms)`);
+  console.log(`Login response for ${user.email}: ${response.status} (${duration}ms)`);
+  
+  if (response.status !== 200) {
+    console.error(`❌ Login failed for ${user.email}: ${response.body}`);
+  }
   
   const success = check(response, {
     "login status is 200": (r) => r.status === 200,
@@ -81,6 +119,14 @@ export function getAuthToken() {
 export function setup() {
   console.log("🚀 Starting k6 performance tests...");
   
+  // Créer tous les utilisateurs de test
+  console.log("📋 Creating test users...");
+  TEST_USERS.forEach(user => {
+    createTestUser(user);
+    sleep(0.2); // Petit délai entre chaque création
+  });
+  
+  console.log("🔐 Getting authentication token...");
   const token = getAuthToken();
   if (!token) {
     console.error("❌ Failed to get auth token during setup");
@@ -91,6 +137,7 @@ export function setup() {
   return { token };
 }
 
+// ... rest of your existing functions remain the same
 export default function(data) {
   if (!data || !data.token) {
     console.error("❌ No auth token available");
@@ -103,20 +150,17 @@ export default function(data) {
     "Content-Type": "application/json",
   };
 
-  // Test 1: Récupération des feedbacks
   testFeedbackFetch(headers);
   
-  // Test 2: Ajout d'un feedback (occasionnel)
-  if (Math.random() < 0.3) { // 30% de chance
+  if (Math.random() < 0.3) {
     testFeedbackCreation(headers);
   }
   
-  // Test 3: Envoi des métriques (occasionnel)
-  if (__VU === 1 && __ITER % 10 === 0) { // Premier VU, toutes les 10 itérations
+  if (__VU === 1 && __ITER % 10 === 0) {
     sendMetricsToAPI(headers);
   }
   
-  sleep(1 + Math.random() * 2); // Sleep variable entre 1-3s
+  sleep(1 + Math.random() * 2);
 }
 
 function testFeedbackFetch(headers) {
