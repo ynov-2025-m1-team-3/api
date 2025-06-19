@@ -213,6 +213,41 @@ export async function addFeedback(
   }
 }
 
+export async function findAllFeedbacks(
+  request: FastifyRequest,
+  reply: FastifyReply,
+) {
+  try {
+    const feedbacks = await request.server.prisma.feedback.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { Uploader: { select: { id: true, name: true } } },
+    });
+
+    const formattedFeedbacks = await Promise.all(
+      feedbacks.map(async (feedback) => {
+        const channel = await request.server.prisma.channel.findUnique({
+          where: { id: feedback.channelId },
+        });
+
+        return {
+          id: feedback.id,
+          date: feedback.createdAt.toISOString(),
+          channel: channel?.name || "unknown",
+          text: feedback.text,
+          user: feedback.Uploader?.name || "Unknown User",
+          userId: feedback.UserId,
+          sentiment: feedback.sentiment,
+        };
+      }),
+    );
+
+    return reply.status(200).send(formattedFeedbacks);
+  } catch (error) {
+    console.error(error);
+    return reply.status(500).send({ message: "Erreur interne du serveur" });
+  }
+}
+
 export async function findAllFeedbacksByUserId(
   request: FastifyRequest,
   reply: FastifyReply,
