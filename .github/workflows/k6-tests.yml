@@ -38,60 +38,55 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    # Vérifier la structure du projet
     - name: Check project structure
       run: |
         echo "=== Project structure ==="
         ls -la
-        echo "=== Checking for package.json files ==="
-        find . -name "package.json" -type f
-        echo "=== Checking for package-lock.json files ==="
-        find . -name "package-lock.json" -type f
+        echo "=== Checking API directory ==="
+        ls -la api/ || echo "API directory not found"
+        echo "=== Checking for bun.lockb ==="
+        find . -name "bun.lockb" -type f
     
-    # Setup Node.js sans cache au début pour éviter l'erreur
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    # Setup Bun instead of Node.js
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
       with:
-        node-version: '20'
+        bun-version: latest
     
-    # Installer les dépendances et créer le cache manuellement
+    # Install dependencies with Bun
     - name: Install API dependencies
       run: |
-        if [ -f "package.json" ]; then
-          echo "Found API package.json"
-          npm install
-          npm ci
-        else
-          echo "❌ API package.json not found"
-          exit 1
-        fi
+        echo "Installing dependencies with Bun..."
+        bun install
     
-    # Maintenant setup le cache après que les node_modules existent
-    - name: Cache Node.js modules
+    # Cache Bun dependencies
+    - name: Cache Bun dependencies
       uses: actions/cache@v3
       with:
         path: |
           node_modules
-          ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          ~/.bun/install/cache
+        key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
         restore-keys: |
-          ${{ runner.os }}-node-
+          ${{ runner.os }}-bun-
     
     - name: Setup database
       run: |
-        npx prisma generate
-        npx prisma migrate deploy
-        npx prisma db seed
+        bunx prisma generate
+        bunx prisma migrate deploy
+        bunx prisma db seed
       env:
         DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
     
-    - name: Install wait-port
-      run: |
-        npm install wait-port
+    - name: Build API
+      run: |        
+        bun run build
+      env:
+        NODE_ENV: production
     
     - name: Start API server in background
       run: |
-        nohup npm start > api.log 2>&1 &
+        nohup bun run start > api.log 2>&1 &
         echo $! > api.pid
         echo "API started with PID: $(cat api.pid)"
       env:
@@ -145,13 +140,19 @@ jobs:
         if ! check_api; then
           echo "=== Diagnostic Info ==="
           echo "Process status:"
-          ps aux | grep node || echo "No node processes found"
+          ps aux | grep bun || echo "No bun processes found"
           
           echo "Network status:"
           netstat -tlnp | grep :3000 || echo "Port 3000 not listening"
           
           echo "Environment variables:"
           env | grep -E "(DATABASE_URL|REDIS_URL|NODE_ENV)"
+          
+          echo "=== API directory contents ==="
+          ls -la api/
+          
+          echo "=== Dist directory contents ==="
+          ls -la api/dist/ || echo "No dist directory"
           
           exit 1
         fi
@@ -177,7 +178,7 @@ jobs:
         fi
     
     - name: Run k6 Performance Tests
-      run: |        
+      run: |
         echo "Starting k6 tests..."
         k6 run --duration 1m --vus 3 test/metrics.test.js
       continue-on-error: true
