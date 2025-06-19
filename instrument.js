@@ -6,15 +6,15 @@ Sentry.init({
   
   // Performance Monitoring
   tracesSampleRate: 1.0,
-  
-  // Capture Console
+    // Capture Console
   integrations: [
-    Sentry.httpIntegration({
-      tracing: {
-        instrumentIncomingRequests: true,
-        instrumentOutgoingRequests: true,
-      },
-    }),
+    // Désactivé temporairement pour Bun ESM compatibility
+    // Sentry.httpIntegration({
+    //   tracing: {
+    //     instrumentIncomingRequests: true,
+    //     instrumentOutgoingRequests: true,
+    //   },
+    // }),
     Sentry.consoleIntegration(),
   ],
   

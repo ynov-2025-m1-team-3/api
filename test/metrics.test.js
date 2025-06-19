@@ -53,7 +53,7 @@ function waitForAPI() {
     }
     
     console.log(`⏳ API not ready yet (attempt ${i + 1}/30), status: ${response.status}`);
-    sleep(2);
+    sleep(0.5);
   }
   
   console.error("❌ API is not accessible after 60 seconds");

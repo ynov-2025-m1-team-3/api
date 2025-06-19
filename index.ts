@@ -1,4 +1,4 @@
-import "./instrument"; // Import Sentry en premier
+import "./instrument"; // Import Sentry en premier (sans instrumentation HTTP automatique)
 import fastify from "fastify";
 import cors from "@fastify/cors";
 import dotenv from "dotenv";
