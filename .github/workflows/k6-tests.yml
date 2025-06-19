@@ -18,9 +18,13 @@ jobs:
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+      - name: Setup K6
+        uses: grafana/setup-k6-action@v1
 
       - name: Install dependencies
         run: bun install
 
       - name: Run Performance Tests
-        run: bun run test:perf
+        uses: grafana/run-k6-action@v1
+        with:
+          path: test/metrics.test.js
