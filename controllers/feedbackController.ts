@@ -322,3 +322,22 @@ export async function deleteAllFeedbacks(
     return reply.status(500).send({ message: "Erreur interne du serveur" });
   }
 }
+
+export async function deleteFeedbacksByUserId(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  try {
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({ message: "Utilisateur non authentifié" });
+    }
+    await request.server.prisma.feedback.deleteMany({
+      where: { UserId: userId }
+    });
+    return reply.status(200).send({ message: "Tous les feedbacks de l'utilisateur ont été supprimés avec succès" });
+  } catch (error) {
+    console.error(error);
+    return reply.status(500).send({ message: "Erreur interne du serveur" });
+  }
+}

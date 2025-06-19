@@ -14,6 +14,10 @@ export default async function feedbackRoutes(fastify: FastifyInstance) {
     Params: { channelName: string };
   }>("/feedback/channel/:channelName", { preHandler: authenticate }, FeedbackController.findByChannel);
 
+  fastify.post<{
+    Params: { id: string };
+  }>("/feedback/delete/:id", { preHandler: authenticate }, FeedbackController.deleteFeedbacksByUserId);
+
   fastify.delete("/feedback/:id", FeedbackController.deleteFeedback);
   fastify.delete("/feedback", FeedbackController.deleteAllFeedbacks);
 }
