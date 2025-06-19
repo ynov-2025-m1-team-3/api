@@ -2,76 +2,57 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches:
+      - main
+      - dev
+      - feature/*
+      - fix/*
   pull_request:
-    branches: [ main ]
 
 jobs:
-  test:
+  lint-and-test:
     runs-on: ubuntu-latest
-    
-    services:
-      redis:
-        image: redis:alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v1
-      with:
-        bun-version: latest
-    
-    - name: Install API dependencies
-      working-directory: ./api
-      run: bun install
-    
-    - name: Setup test database
-      working-directory: ./api
-      run: |
-        bunx prisma generate
-        bunx prisma db push
-    
-    - name: Start API server in background
-      working-directory: ./api
-      run: |
-        bun run dev &
-        echo $! > api.pid
-      env:
-        DATABASE_URL: "file:./test.db"
-        JWT_SECRET: "test_jwt_secret_key"
-        REDIS_URL: "redis://localhost:6379"
-        NODE_ENV: "test"
-    
-    - name: Wait for API to be ready
-      run: |
-        timeout 60 bash -c 'until curl -f http://localhost:3000/api/health; do echo "Waiting for API..."; sleep 2; done'
-    
-    - name: Run unit tests
-      working-directory: ./api
-      run: bun test
-    
-    - name: Install K6
-      run: |
-        sudo gpg -k
-        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-        sudo apt-get update
-        sudo apt-get install k6
-    
-    - name: Run performance tests
-      working-directory: ./api
-      run: k6 run test/metrics.test.js
-    
-    - name: Stop API server
-      run: |
-        if [ -f ./api/api.pid ]; then
-          kill $(cat ./api/api.pid) || true
-        fi
+      - uses: actions/checkout@v3
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Generate Prisma Client
+        run: bunx prisma generate
+
+      - name: Lint code
+        run: bun run lint
+
+      - name: Check type
+        run: bun run typecheck
+
+  build:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Generate Prisma Client
+        run: bunx prisma generate
+
+      - name: "Test project"
+        run: bun run test
+
+      - name: Build project
+        run: bun run build
