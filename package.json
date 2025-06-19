@@ -2,8 +2,7 @@
   "name": "api",
   "module": "index.ts",
   "type": "module",
-  "private": true,
-  "scripts": {
+  "private": true,  "scripts": {
     "build": "bun install --force && bunx prisma generate && bun build index.ts --outdir=dist --target bun --format esm --sourcemap ",
     "dev": "bun --watch index.ts",
     "typecheck": "bun run --type-check",
@@ -15,7 +14,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:unit": "jest --testPathPattern=__tests__",
-    "test:perf": "k6 run metrics.test.js"
+    "test:perf": "k6 run test/metrics.test.js",
+    "test:k6:local": "bash scripts/run-k6-tests.sh"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
